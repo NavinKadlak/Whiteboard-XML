@@ -1,0 +1,53 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- TOOLBAR -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_margin="5dp">
+
+
+        <ImageView
+            android:id="@+id/btnDraw"
+            android:tooltipText="Draw"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/outline_brush_24"
+            android:background="@drawable/img_bg_selector"/>
+
+        <ImageView
+            android:id="@+id/btnErase"
+            android:tooltipText="Eraser"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/outline_edit_off_24"
+            android:background="@drawable/img_bg_selector"/>
+
+        <ImageView
+            android:id="@+id/btnCircle"
+            android:tooltipText="Eraser"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/outline_shapes_24"
+            android:background="@drawable/img_bg_selector"/>
+
+        <ImageView
+            android:id="@+id/btnColor"
+            android:tooltipText="Color Picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/baseline_circle_24"
+            android:background="@drawable/img_bg_selector"/>
+    </LinearLayout>
+
+    <com.nsk.whiteboardtataclassedge.ui.views.WhiteboardView
+        android:id="@+id/whiteboard"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+</LinearLayout>
