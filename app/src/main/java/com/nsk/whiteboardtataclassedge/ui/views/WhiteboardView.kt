@@ -60,7 +60,7 @@ class WhiteboardView @JvmOverloads constructor(
 
 
     fun setMode(mode: Mode) { currentMode = mode; invalidate() }
-    fun setColor(colour : String) { c = Color.parseColor(colour); invalidate() }
+    fun setColor(colour : Int) { c = /*Color.parseColor(colour)*/colour; invalidate() }
   //  fun addCircle(x: Float, y: Float) { shapes.add(Shape( centerX = x, centerY = y, radius = 50f)); invalidate() }
 
     // Add shapes

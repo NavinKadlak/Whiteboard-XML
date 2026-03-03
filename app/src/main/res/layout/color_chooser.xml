@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <View
+        android:id="@+id/col1"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@android:color/holo_red_dark"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:padding="20dp"
+        android:clickable="true"
+        android:foreground="?selectableItemBackground"
+        />
+
+    <View
+        android:id="@+id/col2"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@android:color/holo_green_dark"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:padding="20dp"
+        android:clickable="true"
+        android:foreground="?selectableItemBackground"
+        />
+
+    <View
+        android:id="@+id/col3"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@android:color/holo_purple"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:padding="20dp"
+        android:clickable="true"
+        android:foreground="?selectableItemBackground"
+        />
+
+    <View
+        android:id="@+id/col4"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@android:color/holo_orange_dark"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:padding="20dp"
+        android:clickable="true"
+        android:foreground="?selectableItemBackground"
+        />
+</LinearLayout>
