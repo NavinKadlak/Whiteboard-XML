@@ -1,21 +1,16 @@
 package com.nsk.whiteboardtataclassedge.ui.views
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
-import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.nsk.whiteboardtataclassedge.data.model.DrawAction
 import com.nsk.whiteboardtataclassedge.data.model.DrawStroke
 import com.nsk.whiteboardtataclassedge.data.model.Shape
 import com.nsk.whiteboardtataclassedge.data.model.ShapeType
@@ -31,15 +26,18 @@ class WhiteboardView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
+    private var viewModel: WhiteboardViewModel? = null
+
     var c = Color.BLACK
+
     // Freehand drawing
-
     private val drawPath = Path()
-    private var canvasBitmap: Bitmap? = null
-    private val drawCanvas = Canvas()
+    private val currentStrokePoints = mutableListOf<PointF>()
 
-    // Shapes
-    private val shapes = mutableListOf<Shape>()
+    // Shapes cached from ViewModel
+    private var cachedStrokes: List<DrawStroke> = emptyList()
+    private var cachedShapes: List<Shape> = emptyList()
+
     private var selectedShape: Shape? = null
     private var currentMode = Mode.FREEHAND
 
@@ -49,69 +47,85 @@ class WhiteboardView @JvmOverloads constructor(
     private var previousTouchY = 0f
     private var motionPointCount = 0
 
-    private val eraserPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE  // ✅ Paint white over your white background
-        strokeWidth = 30f
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
+    fun bind(lifecycleOwner: LifecycleOwner, viewModel: WhiteboardViewModel) {
+        this.viewModel = viewModel
 
-
-
-    fun setMode(mode: Mode) { currentMode = mode; invalidate() }
-    fun setColor(colour : Int) { c = /*Color.parseColor(colour)*/colour; invalidate() }
-  //  fun addCircle(x: Float, y: Float) { shapes.add(Shape( centerX = x, centerY = y, radius = 50f)); invalidate() }
-
-    // Add shapes
-    fun addShape(type: ShapeType, x: Float, y: Float, sides : Int = 4) {
-        val shape = when (type) {
-            ShapeType.CIRCLE -> Shape(type = ShapeType.CIRCLE, centerX = x, centerY = y, color = c)
-            ShapeType.RECTANGLE -> Shape(type = ShapeType.RECTANGLE, centerX = x, centerY = y, width = 220f, height = 160f, color = c)
-            ShapeType.LINE -> Shape(type = ShapeType.LINE, centerX = x, centerY = y, height = 300f, radius = 0f,color = c).apply {
-                points.add(PointF(x-75f, y)); points.add(PointF(x+75f, y))
-            }
-            /*ShapeType.POLYGON -> Shape(type = ShapeType.POLYGON, centerX = x, centerY = y,color = c).apply {
-                // Triangle example
-                points.add(PointF(x, y-50f)); points.add(PointF(x-50f, y+25f)); points.add(PointF(x+50f, y+25f))
-            }
-        }*/
-            ShapeType.POLYGON -> {
-                val polygon = Shape(type = ShapeType.POLYGON, centerX = x, centerY = y, sides = sides, color = c)
-                generatePolygonPoints(polygon)  // Auto-generate vertices
-                polygon
+        lifecycleOwner.lifecycleScope.launch {
+            viewModel.toolType.collect { tool ->
+                currentMode = when (tool) {
+                    ToolType.DRAW -> Mode.FREEHAND
+                    ToolType.ERASER -> Mode.ERASER
+                    ToolType.RECTANGLE -> Mode.RECTANGLE
+                    ToolType.CIRCLE -> Mode.CIRCLE
+                    ToolType.LINE -> Mode.LINE
+                    ToolType.POLYGON -> Mode.POLYGON
+                }
             }
         }
-        shapes.add(shape)
-        invalidate()
-    }
 
+        lifecycleOwner.lifecycleScope.launch {
+            viewModel.color.collect { color ->
+                c = color
+                invalidate()
+            }
+        }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        canvasBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        canvasBitmap?.let { drawCanvas.setBitmap(it) }
-        drawCanvas.drawColor(Color.WHITE)
+        lifecycleOwner.lifecycleScope.launch {
+            viewModel.strokes.collect { strokes ->
+                cachedStrokes = strokes
+                invalidate()
+            }
+        }
+
+        lifecycleOwner.lifecycleScope.launch {
+            viewModel.shapes.collect { shapes ->
+                cachedShapes = shapes
+                invalidate()
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Freehand bitmap
-        canvasBitmap?.let { canvas?.drawBitmap(it, 0f, 0f, null) }
-        // Current path
-       // canvas?.drawPath(drawPath, drawPaint)
-
-        // Draw current path ONLY for FREEHAND (not eraser/shapes)
-        if (currentMode == Mode.FREEHAND) {
-             val drawPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = c; style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND
-                strokeCap = Paint.Cap.ROUND; strokeWidth = 5f
+        // Draw persisted strokes from ViewModel
+        cachedStrokes.forEach { stroke ->
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = stroke.color
+                style = Paint.Style.STROKE
+                strokeWidth = stroke.width
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
             }
 
-            canvas?.drawPath(drawPath, drawPaint)
+            if (stroke.points.size > 1) {
+                val path = Path().apply {
+                    moveTo(stroke.points[0].x, stroke.points[0].y)
+                    for (i in 1 until stroke.points.size) {
+                        lineTo(stroke.points[i].x, stroke.points[i].y)
+                    }
+                }
+                canvas.drawPath(path, paint)
+            } else if (stroke.points.size == 1) {
+                val p = stroke.points[0]
+                canvas.drawPoint(p.x, p.y, paint)
+            }
         }
-        // Shapes
-        shapes.forEach { shape ->
+
+        // Draw current in-progress freehand path
+        if (currentMode == Mode.FREEHAND) {
+            val drawPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = c
+                style = Paint.Style.STROKE
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+                strokeWidth = 5f
+            }
+
+            canvas.drawPath(drawPath, drawPaint)
+        }
+
+        // Shapes from ViewModel
+        cachedShapes.forEach { shape ->
             val paint = Paint().apply { color = shape.color; style = Paint.Style.STROKE; strokeWidth = 5f }
           //  canvas?.drawCircle(shape.centerX, shape.centerY, shape.radius, paint)
 
@@ -166,7 +180,10 @@ class WhiteboardView @JvmOverloads constructor(
                 previousTouchX = touchX
                 previousTouchY = touchY
                 motionPointCount = 0
+                drawPath.reset()
                 drawPath.moveTo(touchX, touchY)
+                currentStrokePoints.clear()
+                currentStrokePoints.add(PointF(touchX, touchY))
             }
             MotionEvent.ACTION_MOVE -> {
                 motionPointCount += 1
@@ -178,15 +195,33 @@ class WhiteboardView @JvmOverloads constructor(
                 }
                 previousTouchX = touchX
                 previousTouchY = touchY
+                currentStrokePoints.add(PointF(touchX, touchY))
             }
             MotionEvent.ACTION_UP -> {
-                 val drawPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = c; style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND
-                    strokeCap = Paint.Cap.ROUND; strokeWidth = 5f
-                }
                 drawPath.lineTo(touchX, touchY)  // Finish curve
-                drawCanvas.drawPath(drawPath, drawPaint)
+                currentStrokePoints.add(PointF(touchX, touchY))
+
+                viewModel?.let { vm ->
+                    if (currentStrokePoints.isNotEmpty()) {
+                        vm.addStroke(currentStrokePoints.toList())
+                    }
+                }
+
                 drawPath.reset()
+                currentStrokePoints.clear()
+            }
+        }
+        invalidate()
+        return true
+    }
+
+    private fun handleEraser(event: MotionEvent, touchX: Float, touchY: Float): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_MOVE,
+            MotionEvent.ACTION_UP -> {
+                // Delegate erase logic to ViewModel (removes nearby strokes)
+                viewModel?.erase(PointF(touchX, touchY))
             }
         }
         invalidate()
@@ -215,13 +250,31 @@ class WhiteboardView @JvmOverloads constructor(
         return true
     }*/
 
+    // Add shapes via ViewModel so state is shared with the rest of the app
+    private fun addShape(type: ShapeType, x: Float, y: Float, sides : Int = 4): Shape? {
+        val shape = when (type) {
+            ShapeType.CIRCLE -> Shape(type = ShapeType.CIRCLE, centerX = x, centerY = y, color = c)
+            ShapeType.RECTANGLE -> Shape(type = ShapeType.RECTANGLE, centerX = x, centerY = y, width = 220f, height = 160f, color = c)
+            ShapeType.LINE -> Shape(type = ShapeType.LINE, centerX = x, centerY = y, height = 300f, radius = 0f,color = c).apply {
+                points.add(PointF(x-75f, y)); points.add(PointF(x+75f, y))
+            }
+            ShapeType.POLYGON -> {
+                val polygon = Shape(type = ShapeType.POLYGON, centerX = x, centerY = y, sides = sides, color = c)
+                generatePolygonPoints(polygon)  // Auto-generate vertices
+                polygon
+            }
+        }
+        viewModel?.addShape(shape)
+        return shape
+    }
+
     private fun handleShape(event: MotionEvent, touchX: Float, touchY: Float): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                selectedShape = shapes.find { isPointInShape(touchX, touchY, it) }
+                selectedShape = cachedShapes.find { isPointInShape(touchX, touchY, it) }
                 if (selectedShape == null) {
                     // Add new shape based on current mode
-                    when (currentMode) {
+                    selectedShape = when (currentMode) {
                         Mode.RECTANGLE -> addShape(ShapeType.RECTANGLE, touchX, touchY)
                         Mode.LINE -> addShape(ShapeType.LINE, touchX, touchY)
                         Mode.POLYGON -> addShape(ShapeType.POLYGON, touchX, touchY, 6)
@@ -239,62 +292,10 @@ class WhiteboardView @JvmOverloads constructor(
                     shape.points.forEachIndexed { index, point ->
                         shape.points[index] = PointF(point.x + dx, point.y + dy)
                     }
+                    viewModel?.updateShape(shape)
                 }
             }
             MotionEvent.ACTION_UP -> selectedShape = null
-        }
-        invalidate()
-        return true
-    }
-
-
-    private fun isPointInCircle(x: Float, y: Float, shape: Shape, threshold: Float = 50f): Boolean {
-        val dx = x - shape.centerX
-        val dy = y - shape.centerY
-        return sqrt((dx * dx + dy * dy).toDouble()).toFloat() <= shape.radius + threshold
-    }
-
-    /*private fun handleEraser(event: MotionEvent, touchX: Float, touchY: Float): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                previousTouchX = touchX
-                previousTouchY = touchY
-                motionPointCount = 0
-                eraserPath.moveTo(touchX, touchY)
-            }
-            MotionEvent.ACTION_MOVE -> {
-                motionPointCount += 1
-                if (motionPointCount > 1) {
-                    val endX = (touchX + previousTouchX) / 2
-                    val endY = (touchY + previousTouchY) / 2
-                    eraserPath.quadTo(previousTouchX, previousTouchY, endX, endY)
-                }
-                previousTouchX = touchX
-                previousTouchY = touchY
-            }
-            MotionEvent.ACTION_UP -> {
-                eraserPath.lineTo(touchX, touchY)
-                // Erase directly on bitmap (pixel-wise)
-                drawCanvas.drawPath(eraserPath, eraserPaint)
-                eraserPath.reset()
-            }
-        }
-        invalidate()
-        return true
-    }*/
-
-    private fun handleEraser(event: MotionEvent, touchX: Float, touchY: Float): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                // Draw circle immediately to bitmap (no path, no magenta)
-                val radius = eraserPaint.strokeWidth / 2
-                drawCanvas.drawCircle(touchX, touchY, radius, eraserPaint)
-            }
-            MotionEvent.ACTION_UP -> {
-                // Optional: Final circle at end point
-                val radius = eraserPaint.strokeWidth / 2
-                drawCanvas.drawCircle(touchX, touchY, radius, eraserPaint)
-            }
         }
         invalidate()
         return true

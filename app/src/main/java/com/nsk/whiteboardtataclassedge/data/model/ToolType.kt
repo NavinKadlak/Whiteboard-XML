@@ -6,5 +6,6 @@ enum class ToolType {
     ERASER,
     RECTANGLE,
     CIRCLE,
-    LINE
+    LINE,
+    POLYGON
 }

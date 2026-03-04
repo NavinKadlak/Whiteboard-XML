@@ -1,7 +1,6 @@
 package com.nsk.whiteboardtataclassedge
 
 import android.app.Dialog
-import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.nsk.whiteboardtataclassedge.databinding.ActivityMainBinding
 import com.nsk.whiteboardtataclassedge.databinding.ColorChooserBinding
 import com.nsk.whiteboardtataclassedge.databinding.PolygonSelectorBinding
+import com.nsk.whiteboardtataclassedge.data.model.ToolType
 import com.nsk.whiteboardtataclassedge.ui.viewModel.WhiteboardViewModel
 import com.nsk.whiteboardtataclassedge.ui.views.WhiteboardView
 
@@ -31,14 +31,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWhiteboard() {
-
+        // Bind custom view to ViewModel for MVVM
+        binding.whiteboard.bind(this, viewModel)
     }
 
     private fun setupToolbar() {
 
         binding.btnDraw.setOnClickListener {
             itemSelector(binding.btnDraw)
-            binding.whiteboard.setMode(WhiteboardView.Mode.FREEHAND)
+            viewModel.setTool(ToolType.DRAW)
         }
 
         /*binding.btnRect.setOnClickListener {
@@ -60,8 +61,7 @@ class MainActivity : AppCompatActivity() {
 */
         binding.btnErase.setOnClickListener {
             itemSelector(binding.btnErase)
-            binding.whiteboard.setMode(WhiteboardView.Mode.ERASER)
-
+            viewModel.setTool(ToolType.ERASER)
         }
         binding.btnColor.setOnClickListener {
             getColorPicker()
@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun getPolygonSelector(){
-       val dialogBinding = PolygonSelectorBinding.inflate(LayoutInflater.from(this@MainActivity))
+        val dialogBinding = PolygonSelectorBinding.inflate(LayoutInflater.from(this@MainActivity))
         val dialog = Dialog(this@MainActivity).apply {
             setContentView(dialogBinding.root)
             setCancelable(true)
@@ -101,19 +101,19 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
 
         dialogBinding.rectangle.setOnClickListener {
-            binding.whiteboard.setMode(WhiteboardView.Mode.RECTANGLE)
+            viewModel.setTool(ToolType.RECTANGLE)
             dialog.cancel()
         }
         dialogBinding.circle.setOnClickListener {
-            binding.whiteboard.setMode(WhiteboardView.Mode.CIRCLE)
+            viewModel.setTool(ToolType.CIRCLE)
             dialog.cancel()
         }
         dialogBinding.line.setOnClickListener {
-            binding.whiteboard.setMode(WhiteboardView.Mode.LINE)
+            viewModel.setTool(ToolType.LINE)
             dialog.cancel()
         }
         dialogBinding.polygon.setOnClickListener {
-            binding.whiteboard.setMode(WhiteboardView.Mode.POLYGON)
+            viewModel.setTool(ToolType.POLYGON)
             dialog.cancel()
         }
 
@@ -131,25 +131,25 @@ class MainActivity : AppCompatActivity() {
         dialogBinding.col1.setOnClickListener {
             val chosenColorBox = dialogBinding.col1.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
-            binding.whiteboard.setColor(colorId)
+            viewModel.setColor(colorId)
             dialog.cancel()
         }
         dialogBinding.col2.setOnClickListener {
             val chosenColorBox = dialogBinding.col2.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
-            binding.whiteboard.setColor(colorId)
+            viewModel.setColor(colorId)
             dialog.cancel()
         }
         dialogBinding.col3.setOnClickListener {
             val chosenColorBox = dialogBinding.col3.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
-            binding.whiteboard.setColor(colorId)
+            viewModel.setColor(colorId)
             dialog.cancel()
         }
         dialogBinding.col4.setOnClickListener {
             val chosenColorBox = dialogBinding.col4.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
-            binding.whiteboard.setColor(colorId)
+            viewModel.setColor(colorId)
             dialog.cancel()
         }
 

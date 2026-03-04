@@ -22,6 +22,13 @@ class WhiteboardViewModel : ViewModel() {
     private val _texts = MutableStateFlow<List<TextItem>>(emptyList())
     val texts = _texts.asStateFlow()
 
+    // Current drawing tool and color exposed to the View layer
+    private val _toolType = MutableStateFlow(ToolType.DRAW)
+    val toolType = _toolType.asStateFlow()
+
+    private val _color = MutableStateFlow(android.graphics.Color.BLACK)
+    val color = _color.asStateFlow()
+
     var isEraserMode = false
 
     private val undoStack = ArrayDeque<WhiteboardAction>()
@@ -32,7 +39,7 @@ class WhiteboardViewModel : ViewModel() {
     fun addStroke(points: List<PointF>) {
         val stroke = DrawStroke(
             points = points,
-            color = android.graphics.Color.BLACK,
+            color = _color.value,
             width = 8f
         )
 
@@ -63,6 +70,13 @@ class WhiteboardViewModel : ViewModel() {
     fun addShape(shape: Shape) {
         _shapes.value += shape
         undoStack.addLast(WhiteboardAction.AddShape(shape))
+        redoStack.clear()
+    }
+
+    fun updateShape(updated: Shape) {
+        _shapes.value = _shapes.value.map { existing ->
+            if (existing.id == updated.id) updated else existing
+        }
     }
 
     // ---------- TEXT ----------
@@ -99,7 +113,36 @@ class WhiteboardViewModel : ViewModel() {
 
     fun redo() {
         if (redoStack.isEmpty()) return
-        undoStack.addLast(redoStack.removeLast())
+        val action = redoStack.removeLast()
+
+        when (action) {
+            is WhiteboardAction.AddStroke ->
+                _strokes.value += action.stroke
+
+            is WhiteboardAction.RemoveStroke ->
+                _strokes.value -= action.stroke
+
+            is WhiteboardAction.AddShape ->
+                _shapes.value += action.shape
+
+            is WhiteboardAction.AddText ->
+                _texts.value += action.text
+
+            else -> {""}
+        }
+
+        undoStack.addLast(action)
+    }
+
+    // ---------- TOOL / COLOR ----------
+
+    fun setTool(toolType: ToolType) {
+        _toolType.value = toolType
+        isEraserMode = toolType == ToolType.ERASER
+    }
+
+    fun setColor(color: Int) {
+        _color.value = color
     }
 
     private fun distance(a: PointF, b: PointF): Float {
