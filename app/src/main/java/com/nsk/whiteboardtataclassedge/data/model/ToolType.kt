@@ -7,5 +7,6 @@ enum class ToolType {
     RECTANGLE,
     CIRCLE,
     LINE,
-    POLYGON
+    POLYGON,
+    TEXT
 }

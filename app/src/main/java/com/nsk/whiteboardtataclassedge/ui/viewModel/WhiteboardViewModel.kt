@@ -50,7 +50,7 @@ class WhiteboardViewModel : ViewModel() {
 
     // ---------- ERASER ----------
 
-    fun erase(point: PointF) {
+    /*fun erase(point: PointF) {
         val target = _strokes.value.firstOrNull {
             it.points.any { p ->
                 distance(p, point) < 60
@@ -63,6 +63,48 @@ class WhiteboardViewModel : ViewModel() {
                 WhiteboardAction.RemoveStroke(it)
             )
         }
+    }*/
+    fun erase(point: PointF) {
+
+        val newStrokes = mutableListOf<DrawStroke>()
+        val removedStrokes = mutableListOf<DrawStroke>()
+
+        _strokes.value.forEach { stroke ->
+
+            val remainingSegments = mutableListOf<MutableList<PointF>>()
+            var currentSegment = mutableListOf<PointF>()
+
+            stroke.points.forEach { p ->
+
+                if (distance(p, point) > 30f) {
+                    currentSegment.add(p)
+                } else {
+                    // break stroke here
+                    if (currentSegment.isNotEmpty()) {
+                        remainingSegments.add(currentSegment)
+                        currentSegment = mutableListOf()
+                    }
+                }
+            }
+
+            if (currentSegment.isNotEmpty()) {
+                remainingSegments.add(currentSegment)
+            }
+
+            if (remainingSegments.isEmpty()) {
+                removedStrokes.add(stroke)
+            } else {
+                remainingSegments.forEach { segment ->
+                    if (segment.size > 1) {
+                        newStrokes.add(
+                            stroke.copy(points = segment)
+                        )
+                    }
+                }
+            }
+        }
+
+        _strokes.value = newStrokes
     }
 
     // ---------- SHAPES ----------
@@ -150,5 +192,11 @@ class WhiteboardViewModel : ViewModel() {
             (a.x - b.x)*(a.x - b.x) +
                     (a.y - b.y)*(a.y - b.y)
         )
+    }
+
+    fun updateText(updated: TextItem) {
+        _texts.value = _texts.value.map {
+            if (it.id == updated.id) updated else it
+        }
     }
 }

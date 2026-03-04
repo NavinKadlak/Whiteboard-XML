@@ -1,18 +1,24 @@
 package com.nsk.whiteboardtataclassedge
 
+import android.app.AlertDialog
 import android.app.Dialog
+import android.graphics.Point
+import android.graphics.PointF
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.nsk.whiteboardtataclassedge.data.model.TextItem
 import com.nsk.whiteboardtataclassedge.databinding.ActivityMainBinding
 import com.nsk.whiteboardtataclassedge.databinding.ColorChooserBinding
 import com.nsk.whiteboardtataclassedge.databinding.PolygonSelectorBinding
 import com.nsk.whiteboardtataclassedge.data.model.ToolType
 import com.nsk.whiteboardtataclassedge.ui.viewModel.WhiteboardViewModel
 import com.nsk.whiteboardtataclassedge.ui.views.WhiteboardView
+import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
@@ -68,13 +74,18 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-       /* binding.btnUndo.setOnClickListener {
+        binding.btnUndo.setOnClickListener {
             viewModel.undo()
         }
 
         binding.btnRedo.setOnClickListener {
             viewModel.redo()
-        }*/
+        }
+        binding.btnText.setOnClickListener {
+            itemSelector(binding.btnText)
+
+            viewModel.setTool(ToolType.TEXT)
+        }
     }
 
     private fun observeViewModel() {
@@ -82,12 +93,18 @@ class MainActivity : AppCompatActivity() {
         /*viewModel.invalidateCanvas.observe(this) {
             binding.whiteboard.invalidate()
         }*/
+
+
+        binding.whiteboard.onTextRequested = { point ->
+            showTextDialog(point)
+        }
     }
 
     private fun itemSelector(view : View){
         binding.btnErase.isSelected =false
         binding.btnDraw.isSelected =false
         binding.btnCircle.isSelected =false
+        binding.btnText.isSelected =false
          view.isSelected=true
     }
 
@@ -154,4 +171,34 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+    private fun showTextDialog(point: PointF) {
+
+        val editText = EditText(this)
+        editText.hint = "Enter text"
+
+        AlertDialog.Builder(this)
+            .setTitle("Add Text")
+            .setView(editText)
+            .setPositiveButton("Add") { _, _ ->
+
+                val text = editText.text.toString()
+
+                if (text.isNotEmpty()) {
+
+                    viewModel.addText(
+                        TextItem(
+                            id = UUID.randomUUID().toString(),
+                            text = text,
+                            position = PointF(point.x, point.y),
+                            color = viewModel.color.value,
+                            size = 20f
+                        )
+                    )
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
 }

@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.nsk.whiteboardtataclassedge.data.model.DrawStroke
 import com.nsk.whiteboardtataclassedge.data.model.Shape
 import com.nsk.whiteboardtataclassedge.data.model.ShapeType
+import com.nsk.whiteboardtataclassedge.data.model.TextItem
 import com.nsk.whiteboardtataclassedge.data.model.ToolType
 import com.nsk.whiteboardtataclassedge.ui.viewModel.WhiteboardViewModel
 import kotlinx.coroutines.launch
@@ -28,6 +29,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     private var viewModel: WhiteboardViewModel? = null
 
+    var onTextRequested: ((PointF) -> Unit)? = null
     var c = Color.BLACK
 
     // Freehand drawing
@@ -37,16 +39,21 @@ class WhiteboardView @JvmOverloads constructor(
     // Shapes cached from ViewModel
     private var cachedStrokes: List<DrawStroke> = emptyList()
     private var cachedShapes: List<Shape> = emptyList()
+    private var cachedText: List<TextItem> = emptyList()
 
     private var selectedShape: Shape? = null
     private var currentMode = Mode.FREEHAND
 
-    enum class Mode { FREEHAND, CIRCLE , RECTANGLE , LINE , POLYGON , ERASER, UNDO, REDO }
+    enum class Mode { FREEHAND, CIRCLE , RECTANGLE , LINE , POLYGON , ERASER, UNDO, REDO, TEXT }
 
     private var previousTouchX = 0f
     private var previousTouchY = 0f
     private var motionPointCount = 0
 
+
+    private var selectedText: TextItem? = null
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
     fun bind(lifecycleOwner: LifecycleOwner, viewModel: WhiteboardViewModel) {
         this.viewModel = viewModel
 
@@ -59,6 +66,7 @@ class WhiteboardView @JvmOverloads constructor(
                     ToolType.CIRCLE -> Mode.CIRCLE
                     ToolType.LINE -> Mode.LINE
                     ToolType.POLYGON -> Mode.POLYGON
+                    ToolType.TEXT -> Mode.TEXT
                 }
             }
         }
@@ -80,6 +88,12 @@ class WhiteboardView @JvmOverloads constructor(
         lifecycleOwner.lifecycleScope.launch {
             viewModel.shapes.collect { shapes ->
                 cachedShapes = shapes
+                invalidate()
+            }
+        }
+        lifecycleOwner.lifecycleScope.launch {
+            viewModel.texts.collect { texts ->
+                cachedText = texts
                 invalidate()
             }
         }
@@ -157,6 +171,25 @@ class WhiteboardView @JvmOverloads constructor(
             }
         }
 
+        // Draw text
+
+         val textPaint = Paint().apply {
+            textSize = 48f
+            isAntiAlias = true
+        }
+
+        cachedText.forEach { textItem ->
+
+            textPaint.color = textItem.color
+
+            canvas.drawText(
+                textItem.text,
+                textItem.position.x,
+                textItem.position.y,
+                textPaint
+            )
+        }
+
 
     }
 
@@ -170,6 +203,7 @@ class WhiteboardView @JvmOverloads constructor(
             Mode.ERASER -> handleEraser(event, touchX, touchY)
             Mode.UNDO -> TODO()
             Mode.REDO -> TODO()
+            Mode.TEXT -> handleText(event, touchX, touchY)
 
         }
     }
@@ -332,6 +366,69 @@ class WhiteboardView @JvmOverloads constructor(
             val x = shape.centerX + radius * kotlin.math.cos(angle).toFloat()
             val y = shape.centerY + radius * kotlin.math.sin(angle).toFloat()
             shape.points.add(PointF(x, y))
+        }
+    }
+
+    private fun handleText(
+        event: MotionEvent,
+        touchX: Float,
+        touchY: Float
+    ): Boolean {
+
+        when (event.action) {
+
+            MotionEvent.ACTION_DOWN -> {
+
+                selectedText = findTouchedText(touchX, touchY)
+
+                if (selectedText == null) {
+                    // create new text
+                    onTextRequested?.invoke(PointF(touchX, touchY))
+                } else {
+                    lastTouchX = touchX
+                    lastTouchY = touchY
+                }
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+
+                selectedText?.let { text ->
+
+                    val dx = touchX - lastTouchX
+                    val dy = touchY - lastTouchY
+
+                    val updated = text.copy(
+                        position = PointF(
+                            text.position.x + dx,
+                            text.position.y + dy
+                        )
+                    )
+
+                    viewModel?.updateText(updated)
+
+                    selectedText = updated
+                    lastTouchX = touchX
+                    lastTouchY = touchY
+                }
+            }
+
+            MotionEvent.ACTION_UP -> {
+                selectedText = null
+            }
+        }
+
+        return true
+    }
+
+    private fun findTouchedText(x: Float, y: Float): TextItem? {
+
+        return cachedText.lastOrNull { text ->
+
+            val textWidth = text.text.length * text.size
+            val textHeight = text.size
+
+            x in text.position.x..(text.position.x + textWidth) &&
+                    y in (text.position.y - textHeight)..text.position.y
         }
     }
 
