@@ -2,13 +2,19 @@ package com.nsk.whiteboardtataclassedge
 
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.ContentValues
+import android.content.Context
 import android.graphics.Point
 import android.graphics.PointF
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.nsk.whiteboardtataclassedge.data.model.TextItem
@@ -18,6 +24,11 @@ import com.nsk.whiteboardtataclassedge.databinding.PolygonSelectorBinding
 import com.nsk.whiteboardtataclassedge.data.model.ToolType
 import com.nsk.whiteboardtataclassedge.ui.viewModel.WhiteboardViewModel
 import com.nsk.whiteboardtataclassedge.ui.views.WhiteboardView
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
@@ -85,6 +96,15 @@ class MainActivity : AppCompatActivity() {
             itemSelector(binding.btnText)
 
             viewModel.setTool(ToolType.TEXT)
+        }
+
+        binding.btnSave.setOnClickListener {
+            saveJsonFile()
+        }
+
+        binding.btnImport.setOnClickListener {
+
+            pickJsonLauncher.launch("application/json")
         }
     }
 
@@ -201,4 +221,58 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+
+    private fun saveJsonFile() {
+
+        val json = viewModel.exportWhiteboard()
+
+        saveJsonToDownloads(this@MainActivity,json)
+    }
+
+    private val pickJsonLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+
+            uri ?: return@registerForActivityResult
+
+            val inputStream = contentResolver.openInputStream(uri)
+
+            val json = inputStream?.bufferedReader().use { it?.readText() }
+
+            json?.let {
+                viewModel.importWhiteboard(it)
+            }
+        }
+
+    fun saveJsonToDownloads(context: Context, json: String) {
+
+
+        val fileName = generateFileName()
+
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/json")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val uri = context.contentResolver.insert(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            values
+        )
+
+        uri?.let {
+            context.contentResolver.openOutputStream(it)?.use { output ->
+                output.write(json.toByteArray())
+
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity,"file saved", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    fun generateFileName(): String {
+        val formatter = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+        val timestamp = formatter.format(Date())
+        return "whiteboard_${timestamp}.json"
+    }
 }

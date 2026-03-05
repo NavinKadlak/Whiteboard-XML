@@ -2,12 +2,14 @@ package com.nsk.whiteboardtataclassedge.ui.viewModel
 
 import android.graphics.PointF
 import androidx.lifecycle.ViewModel
+import com.google.gson.Gson
 import com.nsk.whiteboardtataclassedge.data.model.DrawAction
 import com.nsk.whiteboardtataclassedge.data.model.DrawStroke
 import com.nsk.whiteboardtataclassedge.data.model.Shape
 import com.nsk.whiteboardtataclassedge.data.model.TextItem
 import com.nsk.whiteboardtataclassedge.data.model.ToolType
 import com.nsk.whiteboardtataclassedge.data.model.WhiteboardAction
+import com.nsk.whiteboardtataclassedge.data.model.WhiteboardState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -198,5 +200,29 @@ class WhiteboardViewModel : ViewModel() {
         _texts.value = _texts.value.map {
             if (it.id == updated.id) updated else it
         }
+    }
+
+
+    fun exportWhiteboard(): String {
+
+        val state = WhiteboardState(
+            strokes = _strokes.value,
+            shapes = _shapes.value,
+            texts = _texts.value
+        )
+
+        return Gson().toJson(state)
+    }
+
+    fun importWhiteboard(json: String) {
+
+        val state = Gson().fromJson(
+            json,
+            WhiteboardState::class.java
+        )
+
+        _strokes.value = state.strokes
+        _shapes.value = state.shapes
+        _texts.value = state.texts
     }
 }

@@ -65,6 +65,21 @@
             android:layout_height="wrap_content"
             android:src="@drawable/baseline_abc_24"
             android:background="@drawable/img_bg_selector"/>
+  <ImageView
+            android:id="@+id/btnSave"
+            android:tooltipText="Color Picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/outline_save_as_24"
+            android:background="@drawable/img_bg_selector"/>
+  <ImageView
+            android:id="@+id/btnImport"
+            android:tooltipText="Color Picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/outline_folder_open_24"
+            android:background="@drawable/img_bg_selector"/>
+
 
     </LinearLayout>
 
