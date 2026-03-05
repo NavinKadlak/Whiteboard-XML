@@ -41,8 +41,8 @@
             android:tooltipText="Color Picker"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/baseline_circle_24"
-            android:background="@drawable/img_bg_selector"/>
+            android:src="@drawable/baseline_color_lens_24"
+            android:background="@color/black"/>
 
      <ImageView
             android:id="@+id/btnUndo"

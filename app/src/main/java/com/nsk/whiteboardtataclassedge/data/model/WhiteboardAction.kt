@@ -9,4 +9,6 @@ sealed class WhiteboardAction {
 
     data class AddText(val text: TextItem): WhiteboardAction()
     data class RemoveText(val text: TextItem): WhiteboardAction()
+
+    data class Erase(val previousStrokes: List<DrawStroke>) : WhiteboardAction()
 }

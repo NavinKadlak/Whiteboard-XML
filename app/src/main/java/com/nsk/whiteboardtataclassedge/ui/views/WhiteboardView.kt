@@ -102,7 +102,7 @@ class WhiteboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         // Draw persisted strokes from ViewModel
-        cachedStrokes.forEach { stroke ->
+       /* cachedStrokes.forEach { stroke ->
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = stroke.color
                 style = Paint.Style.STROKE
@@ -123,6 +123,10 @@ class WhiteboardView @JvmOverloads constructor(
                 val p = stroke.points[0]
                 canvas.drawPoint(p.x, p.y, paint)
             }
+        }*/
+
+        cachedStrokes.forEach { stroke ->
+            drawSmoothStroke(canvas, stroke)
         }
 
         // Draw current in-progress freehand path
@@ -220,16 +224,22 @@ class WhiteboardView @JvmOverloads constructor(
                 currentStrokePoints.add(PointF(touchX, touchY))
             }
             MotionEvent.ACTION_MOVE -> {
-                motionPointCount += 1
-                if (motionPointCount > 1) {  // Skip first move event
-                    // Quadratic Bézier: current point, midpoint to previous, previous point
-                    val endX = (touchX + previousTouchX) / 2
-                    val endY = (touchY + previousTouchY) / 2
-                    drawPath.quadTo(previousTouchX, previousTouchY, endX, endY)
+
+                val dx = kotlin.math.abs(touchX - previousTouchX)
+                val dy = kotlin.math.abs(touchY - previousTouchY)
+
+                if (dx >= 4f || dy >= 4f) {
+
+                    val midX = (touchX + previousTouchX) / 2
+                    val midY = (touchY + previousTouchY) / 2
+
+                    drawPath.quadTo(previousTouchX, previousTouchY, midX, midY)
+
+                    previousTouchX = touchX
+                    previousTouchY = touchY
+
+                    currentStrokePoints.add(PointF(touchX, touchY))
                 }
-                previousTouchX = touchX
-                previousTouchY = touchY
-                currentStrokePoints.add(PointF(touchX, touchY))
             }
             MotionEvent.ACTION_UP -> {
                 drawPath.lineTo(touchX, touchY)  // Finish curve
@@ -430,6 +440,38 @@ class WhiteboardView @JvmOverloads constructor(
             x in text.position.x..(text.position.x + textWidth) &&
                     y in (text.position.y - textHeight)..text.position.y
         }
+    }
+
+    private fun drawSmoothStroke(canvas: Canvas, stroke: DrawStroke) {
+
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = stroke.color
+            style = Paint.Style.STROKE
+            strokeWidth = stroke.width
+            strokeJoin = Paint.Join.ROUND
+            strokeCap = Paint.Cap.ROUND
+        }
+
+        val points = stroke.points
+
+        if (points.isEmpty()) return
+
+        val path = Path()
+
+        path.moveTo(points[0].x, points[0].y)
+
+        for (i in 1 until points.size) {
+
+            val prev = points[i - 1]
+            val curr = points[i]
+
+            val midX = (prev.x + curr.x) / 2
+            val midY = (prev.y + curr.y) / 2
+
+            path.quadTo(prev.x, prev.y, midX, midY)
+        }
+
+        canvas.drawPath(path, paint)
     }
 
 }

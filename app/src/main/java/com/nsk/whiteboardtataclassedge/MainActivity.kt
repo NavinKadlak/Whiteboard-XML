@@ -17,6 +17,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.nsk.whiteboardtataclassedge.data.model.TextItem
 import com.nsk.whiteboardtataclassedge.databinding.ActivityMainBinding
 import com.nsk.whiteboardtataclassedge.databinding.ColorChooserBinding
@@ -40,8 +44,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContentView(binding.root)
 
+
+        hideStatusBar()
         setupWhiteboard()
         setupToolbar()
         observeViewModel()
@@ -54,6 +62,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupToolbar() {
 
+        binding.btnDraw.isSelected =true
         binding.btnDraw.setOnClickListener {
             itemSelector(binding.btnDraw)
             viewModel.setTool(ToolType.DRAW)
@@ -170,24 +179,40 @@ class MainActivity : AppCompatActivity() {
             val colorId = chosenColorBox.color
             viewModel.setColor(colorId)
             dialog.cancel()
+            binding.btnColor.setBackgroundColor(colorId)
         }
         dialogBinding.col2.setOnClickListener {
             val chosenColorBox = dialogBinding.col2.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
             viewModel.setColor(colorId)
             dialog.cancel()
+            binding.btnColor.setBackgroundColor(colorId)
+
         }
         dialogBinding.col3.setOnClickListener {
             val chosenColorBox = dialogBinding.col3.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
             viewModel.setColor(colorId)
             dialog.cancel()
+            binding.btnColor.setBackgroundColor(colorId)
+
         }
         dialogBinding.col4.setOnClickListener {
             val chosenColorBox = dialogBinding.col4.getBackground() as ColorDrawable
             val colorId = chosenColorBox.color
             viewModel.setColor(colorId)
             dialog.cancel()
+            binding.btnColor.setBackgroundColor(colorId)
+
+        }
+
+        dialogBinding.col5.setOnClickListener {
+            val chosenColorBox = dialogBinding.col5.getBackground() as ColorDrawable
+            val colorId = chosenColorBox.color
+            viewModel.setColor(colorId)
+            dialog.cancel()
+            binding.btnColor.setBackgroundColor(colorId)
+
         }
 
     }
@@ -274,5 +299,15 @@ class MainActivity : AppCompatActivity() {
         val formatter = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
         val timestamp = formatter.format(Date())
         return "whiteboard_${timestamp}.json"
+    }
+
+    private fun hideStatusBar() {
+
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+
+        controller.hide(WindowInsetsCompat.Type.statusBars())
+
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 }

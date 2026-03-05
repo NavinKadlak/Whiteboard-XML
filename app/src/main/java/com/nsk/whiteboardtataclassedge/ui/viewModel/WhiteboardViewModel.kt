@@ -78,7 +78,7 @@ class WhiteboardViewModel : ViewModel() {
 
             stroke.points.forEach { p ->
 
-                if (distance(p, point) > 30f) {
+                if (distance(p, point) > 40f) {
                     currentSegment.add(p)
                 } else {
                     // break stroke here
@@ -107,6 +107,12 @@ class WhiteboardViewModel : ViewModel() {
         }
 
         _strokes.value = newStrokes
+        // Save undo state
+        undoStack.addLast(
+            WhiteboardAction.Erase(_strokes.value)
+        )
+
+        redoStack.clear()
     }
 
     // ---------- SHAPES ----------
@@ -149,6 +155,12 @@ class WhiteboardViewModel : ViewModel() {
             is WhiteboardAction.AddText ->
                 _texts.value -= action.text
 
+            is WhiteboardAction.Erase -> {
+                val current = _strokes.value
+                _strokes.value = action.previousStrokes
+                redoStack.addLast(WhiteboardAction.Erase(current))
+            }
+
             else -> {""}
         }
 
@@ -172,6 +184,11 @@ class WhiteboardViewModel : ViewModel() {
             is WhiteboardAction.AddText ->
                 _texts.value += action.text
 
+            is WhiteboardAction.Erase -> {
+                val current = _strokes.value
+                _strokes.value = action.previousStrokes
+                undoStack.addLast(WhiteboardAction.Erase(current))
+            }
             else -> {""}
         }
 
